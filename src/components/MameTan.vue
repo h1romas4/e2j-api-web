@@ -29,7 +29,9 @@
 </template>
 
 <script>
-  import { mamedic } from './mamedic';
+  import axios from 'axios';
+  import { apiBaseUrl, apiMametan } from './mametan';
+
   export default {
     name: "MameTan",
     data () {
@@ -38,7 +40,7 @@
         items: [],
         search: null,
         select: null,
-        states: mamedic,
+        states: [],
       }
     },
     watch: {
@@ -48,12 +50,16 @@
     },
     methods: {
       querySelections (v) {
-        this.loading = true
         this.items = this.states.filter(e => {
           return (e || '').toLowerCase().indexOf((v || '').toLowerCase()) > -1
         })
-        this.loading = false
       },
     },
+    async mounted() {
+      this.loading = true
+      const res = await axios.get(`${apiBaseUrl}${apiMametan}`)
+      this.states = res.data
+      this.loading = false
+    }
   }
 </script>
