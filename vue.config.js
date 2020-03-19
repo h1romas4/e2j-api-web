@@ -1,5 +1,6 @@
 module.exports = {
-  "transpileDependencies": [
+    publicPath: process.env.NODE_ENV === 'production' ? '/e2j-api/' : '/',
+    "transpileDependencies": [
     "vuetify"
   ]
 }
