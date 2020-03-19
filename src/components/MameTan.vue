@@ -6,7 +6,7 @@
           dark
           color="teal"
         >
-          <v-toolbar-title>E2J mametan API</v-toolbar-title>
+          <v-toolbar-title>E2J まめ単 API</v-toolbar-title>
           <v-autocomplete
             v-model="select"
             :loading="loading"
