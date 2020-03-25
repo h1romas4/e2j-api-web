@@ -4,7 +4,7 @@
       <v-col cols="12">
         <v-toolbar
           dark
-          color="cyan darken-1"
+          color="light-blue darken-3"
         >
           <v-toolbar-title>E2J まめ単 API</v-toolbar-title>
           <v-autocomplete
@@ -78,6 +78,7 @@
         select: null,
         searchb: null,
         results: [],
+        resultsCashe: {},
         memetan: [],
         releases: [],
       }
@@ -107,9 +108,16 @@
         if(this.searchb === val) return
         if(this.memetan.indexOf(val) === -1) return
         if(this.loading) return
+
         this.searchb = val
-        this.loading = true
+        this.randome = val
+        if(val in this.resultsCashe) {
+          console.log("cache")
+          this.results = this.resultsCashe[val]
+          return
+        }
         try {
+          this.loading = true
           const res1 = await axios.get(`${apiBaseUrl}${apiWhatsNewJ}`, {
             params: { q: val }
           })
@@ -127,8 +135,7 @@
           this.results.sort((a, b) => {
             return a.release.date - b.release.date
           })
-          console.log(this.results)
-          this.randome = val
+          this.resultsCashe[val] = this.results
         } finally {
           this.loading = false
         }
