@@ -12,6 +12,7 @@
             :loading="loading"
             :items="items"
             :search-input.sync="search"
+            :label="randome"
             clearable
             cache-items
             class="mx-4"
@@ -19,8 +20,8 @@
             flat
             hide-no-data
             hide-details
-            label="All your base are belong to us."
             solo-inverted
+            data-element="autocomplete-element"
           ></v-autocomplete>
         </v-toolbar>
       </v-col>
@@ -31,54 +32,79 @@
         :key="i"
         small
       >
-        <template v-slot:opposite>
-          <span
-            :class="`headline font-weight-bold`"
-            v-text="result.release"
-          ></span>
-        </template>
+        <template v-slot:opposite></template>
         <v-card class="elevation-2">
-          <v-card-title class="headline">{{ result.filename }}</v-card-title>
-          <v-card-text><pre>{{ result.content }}</pre></v-card-text>
+          <v-card-title class="headline">
+            <v-btn
+              color="primary"
+              class="ma-2"
+              v-for="release in result.release.release" :key="release.version"
+              :href="'https://www.e2j.net/?s=' + release.version" target="_blank">
+              {{ new Date(release.date) | dateFormat('YYYY-MM-DD') }}&nbsp;({{ release.version }})
+            </v-btn>
+          </v-card-title>
+          <v-card-text>
+            <blockquote class="blockquote">
+              <p><small>{{ result.filename }}</small></p>
+              <pre :class="$style.nowrap" v-html="$options.filters.highlight(result.content, searchb)"></pre>
+            </blockquote>
+          </v-card-text>
         </v-card>
       </v-timeline-item>
     </v-timeline>
   </v-container>
 </template>
 
+<style module>
+.nowrap {
+  white-space: pre-wrap;
+}
+</style>
+
 <script>
-  import axios from 'axios';
-  import { apiBaseUrl, apiMametan, apiWhatsNewJ } from './mametan';
+  import axios from 'axios'
+  import { apiBaseUrl, apiMametan, apiWhatsNewJ, apiRelases } from './mametan'
+  import sanitize from 'sanitize-html'
 
   export default {
     name: "MameTan",
-    data () {
+    data() {
       return {
         loading: false,
+        randome: "Now loading dictionary. Please wait..",
         items: [],
         search: null,
         select: null,
+        searchb: null,
         results: [],
         memetan: [],
         releases: [],
       }
     },
     watch: {
-      search (val) {
-        if(val) {
-          if(val !== this.select) this.querySelections(val)
-          if(this.memetan.indexOf(val) >= 0) this.queryWhatsNewJ(val)
-        }
+      search(val) {
+        if(val && val !== this.select) this.querySelections(val)
+        this.queryWhatsNewJ(val)
       },
     },
+    filters: {
+      highlight(value, search) {
+        // const content = escape(value)
+        const content = sanitize(value)
+        return content.replace(new RegExp(search, 'ig'), `<span class="blue-grey lighten-5">${search}</span>`)
+      }
+    },
     methods: {
-      querySelections (v) {
+      querySelections(val) {
         this.items = this.memetan.filter(e => {
-          return (e || '').toLowerCase().indexOf((v || '').toLowerCase()) > -1
+          return (e || '').toLowerCase().indexOf((val || '').toLowerCase()) > -1
         })
       },
-      async queryWhatsNewJ (val) {
-        console.log("hit!")
+      async queryWhatsNewJ(val) {
+        if(this.searchb === val) return
+        if(this.memetan.indexOf(val) === -1) return
+        if(this.loading) return
+        this.searchb = val
         this.loading = true
         try {
           const res1 = await axios.get(`${apiBaseUrl}${apiWhatsNewJ}`, {
@@ -86,17 +112,50 @@
           })
           this.results = []
           res1.data.forEach((data) => {
+            const release = this.getMameVersion(data.filename)
+            // let release = filename
             this.results.push({
               filename: data.filename,
-              release: "release",
+              release: release,
               content: data.content,
               line: data.line
             })
           })
-          console.log(this.results)
+          this.randome = val
         } finally {
           this.loading = false
         }
+      },
+      async keyboardEvent(e) {
+        // press enter to search
+        const focused = document.activeElement;
+        if (!(e.which === 13 && focused.getAttribute("data-element") == "autocomplete-element")) {
+          return
+        }
+        await this.queryWhatsNewJ(this.search)
+      },
+      getMameVersion(filename) {
+        const regex = filename.match(/^whatsnewJ_(.+)\.txt$/)
+        let release = []
+        if(regex) {
+          const vers = regex[1].split("-")
+          vers.forEach((val) => {
+            const verstr = "0." + val.replace(".", "").substring(1, val.length)
+            release.push( { version: verstr, date: this.findReleaseDate('mame', verstr) })
+          })
+        }
+        return { release: release }
+      },
+      findReleaseDate(kind, version) {
+        // hack Final
+        const find = this.releases[kind].find(rels => rels.version.replace(" Final", "") == version)
+        // hack mame 0.36
+        let date = "1999-07-19T00:00:00.000Z"
+        if(find) date = find.date
+        return Date.parse(date)
+      },
+      getRandomInt(max) {
+        return Math.floor(Math.random() * Math.floor(max));
       },
     },
     async mounted() {
@@ -104,11 +163,21 @@
       try {
         const res1 = await axios.get(`${apiBaseUrl}${apiMametan}`)
         this.memetan = res1.data
-        const res2 = await axios.get(`${apiBaseUrl}${apiMametan}`)
+        const res2 = await axios.get(`${apiBaseUrl}${apiRelases}`)
         this.releases = res2.data
-      } finally {
+        this.randome = this.memetan[this.getRandomInt(this.memetan.length)]
+      } catch(err) {
+        console.log(err)
+      }
+      finally {
         this.loading = false
       }
     },
+    created() {
+      window.addEventListener("keyup", this.keyboardEvent)
+    },
+    beforeDestroy() {
+      window.removeEventListener("keyup", this.keyboardEvent)
+    }
   }
 </script>
