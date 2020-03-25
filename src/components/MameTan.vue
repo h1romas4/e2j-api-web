@@ -4,7 +4,7 @@
       <v-col cols="12">
         <v-toolbar
           dark
-          color="teal"
+          color="cyan darken-1"
         >
           <v-toolbar-title>E2J まめ単 API</v-toolbar-title>
           <v-autocomplete
@@ -13,6 +13,7 @@
             :items="items"
             :search-input.sync="search"
             :label="randome"
+            @blur="onblur"
             clearable
             cache-items
             class="mx-4"
@@ -38,7 +39,7 @@
             <v-btn
               color="primary"
               class="ma-2"
-              v-for="release in result.release.release" :key="release.version"
+              v-for="release in result.release" :key="release.version"
               :href="'https://www.e2j.net/?s=' + release.version" target="_blank">
               {{ new Date(release.date) | dateFormat('YYYY-MM-DD') }}&nbsp;({{ release.version }})
             </v-btn>
@@ -63,8 +64,8 @@
 
 <script>
   import axios from 'axios'
-  import { apiBaseUrl, apiMametan, apiWhatsNewJ, apiRelases } from './mametan'
   import sanitize from 'sanitize-html'
+  import { apiBaseUrl, apiMametan, apiWhatsNewJ, apiRelases } from './mametan'
 
   export default {
     name: "MameTan",
@@ -81,18 +82,20 @@
         releases: [],
       }
     },
-    watch: {
-      search(val) {
-        if(val && val !== this.select) this.querySelections(val)
-        this.queryWhatsNewJ(val)
-      },
-    },
     filters: {
       highlight(value, search) {
         // const content = escape(value)
         const content = sanitize(value)
         return content.replace(new RegExp(search, 'ig'), `<span class="blue-grey lighten-5">${search}</span>`)
       }
+    },
+    watch: {
+      search(val) {
+        // list selected
+        if(val && val !== this.select) this.querySelections(val)
+        // search query
+        this.queryWhatsNewJ(val)
+      },
     },
     methods: {
       querySelections(val) {
@@ -116,15 +119,22 @@
             // let release = filename
             this.results.push({
               filename: data.filename,
-              release: release,
+              release: release.release,
               content: data.content,
               line: data.line
             })
           })
+          this.results.sort((a, b) => {
+            return a.release.date - b.release.date
+          })
+          console.log(this.results)
           this.randome = val
         } finally {
           this.loading = false
         }
+      },
+      onblur() {
+        this.queryWhatsNewJ(this.search)
       },
       async keyboardEvent(e) {
         // press enter to search
