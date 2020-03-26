@@ -116,9 +116,12 @@
     },
     methods: {
       querySelections(val) {
-        this.items = this.memetan.filter(e => {
+        let items = this.memetan.filter(e => {
           return (e || '').toLowerCase().indexOf((val || '').toLowerCase()) > -1
         })
+        items.sort((a, b) => { return a.length - b.length })
+        // for performance
+        this.items = items
       },
       async queryWhatsNewJ(val) {
         if(this.memetan.indexOf(val) === -1) return
