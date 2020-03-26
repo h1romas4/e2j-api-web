@@ -54,7 +54,7 @@
           <v-card-text>
             <blockquote class="blockquote">
               <p><small>{{ result.filename }}</small></p>
-              <pre :class="$style.nowrap" v-html="$options.filters.highlight(result.content, searchb)"></pre>
+              <pre :class="$style.nowrap" v-html="$options.filters.highlight(result.content, search)"></pre>
             </blockquote>
           </v-card-text>
         </v-card>
@@ -94,8 +94,7 @@
         search: null,
         dialog: false,
         select: null,
-        searchb: null,
-        nowSearch: "",
+        nowSearch: null,
         results: [],
         resultsCashe: {},
         memetan: [],
@@ -122,11 +121,9 @@
         })
       },
       async queryWhatsNewJ(val) {
-        if(this.searchb === val) return
         if(this.memetan.indexOf(val) === -1) return
         if(this.loading) return
 
-        this.searchb = val
         this.randome = val
         if(val in this.resultsCashe) {
           this.results = this.resultsCashe[val]
