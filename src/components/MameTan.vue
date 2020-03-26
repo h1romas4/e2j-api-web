@@ -2,29 +2,35 @@
   <v-container>
     <v-row class="text-center">
       <v-col cols="12">
-        <v-toolbar
-          dark
-          color="light-blue darken-3"
-        >
+        <v-form
+          @submit.prevent="">
+          <v-toolbar
+            dark
+            color="grey darken-3">
           <v-toolbar-title>E2J まめ単 API</v-toolbar-title>
-          <v-autocomplete
-            v-model="select"
-            :loading="loading"
-            :items="items"
-            :search-input.sync="search"
-            :label="randome"
-            @blur="onblur"
-            clearable
-            cache-items
-            class="mx-4"
-            filled
-            flat
-            hide-no-data
-            hide-details
-            solo-inverted
-            data-element="autocomplete-element"
-          ></v-autocomplete>
-        </v-toolbar>
+            <v-autocomplete
+              v-model="select"
+              :loading="loading"
+              :items="items"
+              :search-input.sync="search"
+              :label="randome"
+              cache-items
+              color="light-blue darken-3"
+              class="mx-4"
+              filled
+              flat
+              hide-no-data
+              hide-details
+              solo-inverted
+            ></v-autocomplete>
+            <v-btn large
+              @click="onSearch"
+              color="light-blue darken-3">
+              <v-icon>mdi-cached</v-icon>
+              Search
+            </v-btn>
+         </v-toolbar>
+        </v-form>
       </v-col>
     </v-row>
     <v-timeline dense>
@@ -32,6 +38,7 @@
         v-for="(result, i) in results"
         :key="i"
         small
+        color="grey darken-3"
       >
         <template v-slot:opposite></template>
         <v-card class="elevation-2">
@@ -53,6 +60,16 @@
         </v-card>
       </v-timeline-item>
     </v-timeline>
+    <v-dialog v-model="dialog" persistent max-width="400">
+      <v-card>
+        <v-card-title class="headline">Exception</v-card-title>
+        <v-card-text>検索結果がありませんでした。これは不具合です。</v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn text @click="dialog = false">OK</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -75,8 +92,10 @@
         randome: "Now loading dictionary. Please wait..",
         items: [],
         search: null,
+        dialog: false,
         select: null,
         searchb: null,
+        nowSearch: "",
         results: [],
         resultsCashe: {},
         memetan: [],
@@ -94,8 +113,6 @@
       search(val) {
         // list selected
         if(val && val !== this.select) this.querySelections(val)
-        // search query
-        this.queryWhatsNewJ(val)
       },
     },
     methods: {
@@ -112,15 +129,22 @@
         this.searchb = val
         this.randome = val
         if(val in this.resultsCashe) {
-          console.log("cache")
           this.results = this.resultsCashe[val]
           return
         }
         try {
           this.loading = true
+          this.nowSearch = val
           const res1 = await axios.get(`${apiBaseUrl}${apiWhatsNewJ}`, {
             params: { q: val }
           })
+          // another search break
+          if(val !== this.nowSearch) return
+          // exception
+          if(!Array.isArray(res1.data)) {
+            this.dialog = true
+            return
+          }
           this.results = []
           res1.data.forEach((data) => {
             const release = this.getMameVersion(data.filename)
@@ -140,16 +164,9 @@
           this.loading = false
         }
       },
-      onblur() {
+      async onSearch() {
+        // search query (TODO:)
         this.queryWhatsNewJ(this.search)
-      },
-      async keyboardEvent(e) {
-        // press enter to search
-        const focused = document.activeElement;
-        if (!(e.which === 13 && focused.getAttribute("data-element") == "autocomplete-element")) {
-          return
-        }
-        await this.queryWhatsNewJ(this.search)
       },
       getMameVersion(filename) {
         const regex = filename.match(/^whatsnewJ_(.+)\.txt$/)
@@ -190,11 +207,5 @@
         this.loading = false
       }
     },
-    created() {
-      window.addEventListener("keyup", this.keyboardEvent)
-    },
-    beforeDestroy() {
-      window.removeEventListener("keyup", this.keyboardEvent)
-    }
   }
 </script>
