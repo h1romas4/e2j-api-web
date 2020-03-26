@@ -54,7 +54,7 @@
           <v-card-text>
             <blockquote class="blockquote">
               <p><small>{{ result.filename }}</small></p>
-              <pre :class="$style.nowrap" v-html="$options.filters.highlight(result.content, nowSearch)"></pre>
+              <pre :class="$style.nowrap" v-html="result.content"></pre>
             </blockquote>
           </v-card-text>
         </v-card>
@@ -101,13 +101,6 @@
         releases: [],
       }
     },
-    filters: {
-      highlight(value, search) {
-        // const content = escape(value)
-        const content = sanitize(value)
-        return content.replace(new RegExp(search, 'ig'), `<span class="blue-grey lighten-5">${search}</span>`)
-      }
-    },
     watch: {
       search(val) {
         // list selected
@@ -131,7 +124,6 @@
         }
         try {
           this.loading = true
-          this.nowSearch = val
           const res1 = await axios.get(`${apiBaseUrl}${apiWhatsNewJ}`, {
             params: { q: val }
           })
@@ -145,13 +137,19 @@
           this.results = []
           res1.data.forEach((data) => {
             const release = this.getMameVersion(data.filename)
-            // let release = filename
-            this.results.push({
+            let record = {
               filename: data.filename,
               release: release.release,
-              content: data.content,
+              content: "",
               line: data.line
+            }
+            // speed hack (TODO:)
+            const content = this.highlight(data.content, val)
+            Object.defineProperty(record, 'content', {
+              configurable: false,
+              value: content
             })
+            this.results.push(record)
           })
           this.results.sort((a, b) => {
             return a.release.date - b.release.date
@@ -162,8 +160,14 @@
         }
       },
       async onSearch() {
+        this.nowSearch = this.search
         // search query (TODO:)
         this.queryWhatsNewJ(this.search)
+      },
+      highlight(value, search) {
+        // const content = escape(value)
+        const content = sanitize(value)
+        return content.replace(new RegExp(search, 'ig'), `<span class="blue-grey lighten-5">${search}</span>`)
       },
       getMameVersion(filename) {
         const regex = filename.match(/^whatsnewJ_(.+)\.txt$/)
