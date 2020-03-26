@@ -116,12 +116,9 @@
     },
     methods: {
       querySelections(val) {
-        let items = this.memetan.filter(e => {
+        this.items = this.memetan.filter(e => {
           return (e || '').toLowerCase().indexOf((val || '').toLowerCase()) > -1
         })
-        items.sort((a, b) => { return a.length - b.length })
-        // for performance
-        this.items = items
       },
       async queryWhatsNewJ(val) {
         if(this.memetan.indexOf(val) === -1) return
@@ -196,6 +193,7 @@
       this.loading = true
       try {
         const res1 = await axios.get(`${apiBaseUrl}${apiMametan}`)
+        res1.data.sort((a, b) => { return a.length - b.length })
         this.memetan = res1.data
         const res2 = await axios.get(`${apiBaseUrl}${apiRelases}`)
         this.releases = res2.data
