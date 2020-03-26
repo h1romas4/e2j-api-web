@@ -54,7 +54,7 @@
           <v-card-text>
             <blockquote class="blockquote">
               <p><small>{{ result.filename }}</small></p>
-              <pre :class="$style.nowrap" v-html="$options.filters.highlight(result.content, search)"></pre>
+              <pre :class="$style.nowrap" v-html="$options.filters.highlight(result.content, nowSearch)"></pre>
             </blockquote>
           </v-card-text>
         </v-card>
